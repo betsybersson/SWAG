@@ -29,48 +29,9 @@ Ns = dims[[3]]
 
 error.names = names(file.out[1,1,1][[1]])
 
-make_print_plots = 0
+make_plots = 0
 ###########################
 
-
-###########################
-## Get loss density plots for each scenario in simulation
-# for Stein's loss
-
-if ( make_print_plots == 1){
-  
-  for (n.ind in 1:length(Ns)){
-    for (g.ind in 1:length(gs)){
-      for (p.ind in 1:length(ps)){
-        temp.out = file.out[g.ind,p.ind,n.ind][[1]]
-        
-        for(j in 1){ 
-          # scale columns
-          loss.j = temp.out[[j]] %>%  log()
-          loss.melt = melt(loss.j)
-          
-          # plot
-          pdf(paste0("lossplot",identifier,"_N",Ns[n.ind],"g",gs[g.ind],"p",ps[p.ind],".pdf"),
-              family="Times",height = 7,width = 6.6)
-          print(ggplot(data = loss.melt, aes(x = value,color = Var2))+
-            geom_density() +
-            ggtitle(paste0(error.names[j]," Error Loss")))
-          dev.off()
-          
-          # get estimate
-          quantiles = rbind(apply(loss.j,2,function(jj)quantile(jj,c(.1,.5,.9))),
-                apply(loss.j,2,mean))
-          quantiles
-          colnames(quantiles)[order(quantiles[4,])]
-       
-        }
-        
-      }
-    }
-  }
-  
-}
-###########################
 
 ###########################
 ## get 
@@ -104,12 +65,66 @@ for (n.ind in 1:length(Ns)){
     }
   }
 }
-###########################
 
-
-###########################
 ## print output to screen
 round(avg_loss_output,2)
-# xtable(round(avg_loss_output,2))
+
 ###########################
 
+
+###########################
+## Get loss density plots in simulation
+# for Stein's loss
+if ( make_plots == 1){
+  suffixes = c("_homosep","_homoNOTsep","_heterosep","_heteroNOTsep")
+  titles = c("Homogenenous, Kronecker", "Homogeneous, not Kronecker",
+             "Heterogeneous, Kronecker","Heterogeneous, not Kronecker")
+  identifier = suffixes
+  
+  all.out = list()
+  for ( j in 1:length(suffixes)){
+    temp.out = file.out[2,2,1][[1]]
+    loss.stein = temp.out[[1]] %>% log()
+    
+    all.out[[j]] = loss.stein[,c(2,7,6,4,5)]
+  }
+  
+  names = colnames(all.out[[1]])
+  legend.names.edit = c("SWAG","MLE","pool","K","Kpool")
+  colnames(all.out[[1]]) = legend.names.edit
+  
+  # The palette with black:
+  cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+  
+  for ( j in 1:4){
+    loss.melt = melt(all.out[[j]])
+    theme_set(theme_bw())
+    theme_update(text=element_text(family = "Times",size=30),
+                 panel.grid.major = element_blank(),
+                 panel.grid.minor = element_blank(),
+                 strip.background = element_blank(),
+                 plot.title = element_text(hjust = 0.5),
+                 legend.title=element_blank(),
+                 legend.position = c(0.15, 0.8),
+                 axis.text = element_text(size=25))
+    if(j ==1){
+      print(ggplot(data = loss.melt, aes(x = value,color = Var2,fill=Var2))+
+              geom_density(alpha=.3) +
+              ggtitle(titles[j]) +
+              xlab("") +
+              ylab("log Stein loss")+
+              scale_fill_manual(values=cbPalette)+
+              scale_color_manual(values=cbPalette))
+    }else{
+      print(ggplot(data = loss.melt, aes(x = value,color = Var2,fill=Var2))+
+              geom_density(alpha=.3, show.legend = FALSE) +
+              ggtitle(titles[j]) +
+              xlab("") +
+              ylab("log Stein loss")+
+              scale_fill_manual(values=cbPalette)+
+              scale_color_manual(values=cbPalette))
+    }
+  }
+  
+}
+###########################
