@@ -14,7 +14,7 @@ source("./helpers.R")
 ###########################
 ## model parameters
 g = 4
-p1 = 4; p2 = 3; p = p1*p2
+p1 = 8; p2 = 3; p = p1*p2
 N = p + 1
 ns = rep(N,g)
 
@@ -29,11 +29,13 @@ output.save = "loss"
 ###########################
 
 
+print(paste0("Results for p = ",p,"!!!"))
+
 ###########################
 ## GS parameters
-S = 10#28000
-burnin = 2#3000
-thin = 2#10
+S = 28000
+burnin = 3000
+thin = 10
 ## simulation parameters
 sim = 50
 ###########################
