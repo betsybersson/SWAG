@@ -20,13 +20,21 @@ p2 = 3
 data.type = "hetero, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
 ## file output identifyer
 suffix = "_heteroNOTsep"
+## what to save
+output.save = "all" # "loss", "all"
+###########################
+
+###########################
+# which indices to save output of from covariance
+cov.save.inds.labels = list(c(1,1,1),c(2,4,2),c(3,6,4),c(5,5,3)) # row, column, group
+
 ###########################
 
 ###########################
 ## GS parameters
-S = 28000
-burnin = 3000
-thin = 10
+S = 10#28000
+burnin = 2#3000
+thin = 2#10
 ## simulation parameters
 sim = 50
 ###########################
@@ -34,7 +42,7 @@ sim = 50
 
 ###########################
 ## run simmy
-final.out=array(list(),dim=c(length(gs),length(p1s),length(Ns)))
+final.out = toc.swag = sig.out = lambda.out = array(list(),dim=c(length(gs),length(p1s),length(Ns)))
 loss=list()
 for (n.ind in 1:length(Ns)){
   for (g.ind in 1:length(gs)){
@@ -48,6 +56,11 @@ for (n.ind in 1:length(Ns)){
       # calculate final params
       p = p1*p2
       ns = rep(N,g)
+      
+      # get index for cov elements to save
+      cov.save.inds = c(lapply(cov.save.inds.labels, function(a)
+        matrix(1:p^2,ncol=p,nrow=p)[a[1],a[2]]+(p^2)*(a[3]-1))) %>% 
+        unlist()
       
       # storage helper
       nopool.collect = array(NA,dim=c(p,p,g))
@@ -103,10 +116,21 @@ for (n.ind in 1:length(Ns)){
       #setup parallel backend to use many processors
       cores=detectCores()
       cl <- makeCluster(cores[1] - 1)  # dont overload your computer
+      
+      
+      cpp.init = function() {
+        library(Rcpp)
+        sourceCpp("fast_matrix_ops.cpp")
+      }
+      clusterCall(cl,cpp.init)
+      
+      
       registerDoParallel(cl)
       
       
-      parallel.out <- foreach(sim.ind=1:sim, .combine=cbind) %dopar% {
+      parallel.out <- foreach(sim.ind=1:sim, .combine=cbind,
+                              .noexport=c("csolve","crwish")) %dopar% {
+      
 
         output = list()
         
@@ -131,7 +155,9 @@ for (n.ind in 1:length(Ns)){
         
         ###########################
         ## run GS for multiple shrinkage
+        tic.swag = Sys.time()
         model = SWAG_GS(S,burnin,thin,save_all = 0)
+        toc.swag = Sys.time() - tic.swag
 
         ## get estimate under stein's loss
         output$MS.pm = array(colMeans(model$cov.out),dim = c(p,p,g))
@@ -161,44 +187,50 @@ for (n.ind in 1:length(Ns)){
         
         ###########################
         ## no pooling- shrink to decent prior/regularization
+        tic.nopool = Sys.time()
         df = p + 4
         for ( j in 1:g){
           sumsq = t(Y.list[[j]]) %*% Y.list[[j]]
           
           nopool.collect[,,j] = cov.shrink.pm(sumsq,ns[j],eye(p),p+2,de.meaned = T)
         }
-        
+        toc.nopool = Sys.time() - tic.nopool
         output$nopool = nopool.collect
         ###########################
           
         ###########################
         ## kron MLE- hetero
+        tic.kron = Sys.time()
         kron.out = lapply(Y.list,function(j)
           cov.kron.mle(vec.inv.array(j,p1,p2), de.meaned = TRUE))
         kron.out = lapply(kron.out,function(j)kronecker(j$Sigma,j$Psi))
-        
+        toc.kron = Sys.time() - tic.kron
         output$hetero.kron = list.to.3d.array(kron.out)
         ###########################
         
         ###########################
         ## kron MLE- homo
+        tic.kron.homo = Sys.time()
         temp = cov.kron.pool.mle(Y.array,group, de.meaned = TRUE)
         kron.homo.out = kronecker(temp$Sigma,temp$Psi)
-        
+        toc.kron.homo = Sys.time() - tic.kron.homo
         output$homo.kron = rep.array(kron.homo.out,g)
         ###########################
         
         ###########################
         ## homogeneous - pool 
+        tic.pool = Sys.time()
         pool.out = cov.pool(Y.matrix,group)
-        
+        toc.pool = Sys.time() - tic.pool
         output$pool = rep.array(pool.out,g)
         ###########################
         
         ###########################
         ## heterogeneous - standard MLE
+        tic.mle = Sys.time()
         standard.mle = tapply(seq_len(sum(ns)),group,function(KK)
           cov.func(Y.matrix[KK,]))
+        toc.mle = Sys.time() - tic.mle
         
         output$mle = list.to.3d.array(standard.mle)
         ###########################
@@ -210,13 +242,29 @@ for (n.ind in 1:length(Ns)){
           mean(sapply(1:g,function(l) loss_stein(k[,,l],Sig.true[[l]] )))))
         loss$sq = unlist(lapply(output,function(k)
           mean(sapply(1:g,function(l) loss_sq(k[,,l],Sig.true[[l]] )))))
-        
         ###########################
         
-
+        
+        ###########################
+        ## collect run time in a vector
+        toc.out = c(toc.swag,
+                    toc.nopool, 
+                    toc.kron,toc.kron.homo,
+                    toc.pool,
+                    toc.mle)
+        ###########################
+        
+        
         ###########################
         ## return this output
-        output = loss
+        if (output.save == "loss"){
+          output = loss
+        } else if (output.save == "all"){
+          output = list("loss" = loss,
+                        "toc" = toc.swag, ## just return swag toc
+                        "SWAG_sigma" = model$cov.out[,cov.save.inds],
+                        "SWAG_lambda" = c(model$pis))
+        }
       
         output
         
@@ -225,24 +273,66 @@ for (n.ind in 1:length(Ns)){
       #stop cluster
       stopCluster(cl)
       
-      # create new structure
-      new.parallel.out = list()
-      for (j in 1:2){
-        temp = matrix(unlist(parallel.out[j,]),ncol = length(parallel.out[j,][[1]]),byrow=T)
-        colnames(temp)=names(parallel.out[j,][[1]])
-        new.parallel.out$all[[j]] = temp
+      if (output.save == "loss"){
+        # create new structure
+        new.parallel.out = list()
+        for (j in 1:2){
+          temp = matrix(unlist(parallel.out[j,]),
+                        ncol = length(parallel.out[j,][[1]]),byrow=T)
+          colnames(temp)=names(parallel.out[j,][[1]])
+          new.parallel.out$all[[j]] = temp
+        }
+        names(new.parallel.out$all) = rownames(parallel.out)
+        
+        # save output
+        final.out[g.ind,p1.ind,n.ind] = new.parallel.out
+      } else if (output.save == "all") {
+        
+        ## collect loss- match format above to align with future output
+        new.parallel.out = list()
+        for (j in 1:2){
+          temp = lapply(parallel.out[1,],function(k)k[[j]])
+          temp = matrix(unlist(temp),
+                        ncol = length(temp[[1]]),
+                        byrow=T)
+                               
+          colnames(temp)=names(parallel.out[1,1][[1]][[1]])
+          new.parallel.out$all[[j]] = temp
+        }
+        names(new.parallel.out$all) = names(parallel.out[1,][[1]])
+        # save loss output
+        final.out[g.ind,p1.ind,n.ind] = new.parallel.out
+        
+        ## save time out
+        # toc.mean = Reduce("+",parallel.out[2,])/sim
+        # names(toc.mean) = c("MS","nopool","hetero.kron","homo.kron","pool","mle")
+        all = list(); all[[1]] = unlist(parallel.out[2,])
+        toc.swag[g.ind,p1.ind,n.ind] = all
+        
+        ## save sig
+        all = list(); all[[1]] =  parallel.out[3,]
+        sig.out[g.ind,p1.ind,n.ind] = all
+        
+        ## save lambda 
+        temp = matrix(unlist(parallel.out[4,]),
+                            ncol = ncol(parallel.out),
+                            byrow = T)
+        colnames(temp) = paste0("result.",1:ncol(parallel.out))
+        all = list(); all[[1]] =  temp
+        lambda.out[g.ind,p1.ind,n.ind] = all
       }
-      names(new.parallel.out$all) = rownames(parallel.out)
       
-      # save output
-      final.out[g.ind,p1.ind,n.ind] = new.parallel.out
-
+      print(paste0("Finsished running: n ",n.ind,
+                   ", p ",p1.ind,
+                   ", g ",g.ind,
+                   "!!!!!!!!"))
+      
       
     }
   }
 }
 
-
+print("Saving output now !!!")
 
 dimnames(final.out)[[1]]  = paste0("g",gs)
 dimnames(final.out)[[2]]  = paste0("p",p1s)
@@ -251,8 +341,14 @@ dimnames(final.out)[[3]] = paste0("N",Ns)
 
 
 ## save output
-output.filename = paste0("ms_output",suffix,".RDS")
-# saveRDS(final.out,file = output.filename)
+if(output.save == "loss"){
+  output.filename = paste0("ms_output",suffix,".RDS")
+  saveRDS(final.out,file = output.filename)
+} else if (output.save == "all"){
+  output.filename = paste0("ms_output_all",suffix,".Rdata")
+  save(final.out,toc.swag,lambda.out,sig.out,
+       file = output.filename)
+}
 
 ## summarize output
 source("eval_simulation.R")
