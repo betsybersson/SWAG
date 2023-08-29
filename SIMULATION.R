@@ -22,6 +22,8 @@ data.type = "hetero, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
 suffix = "_heteroNOTsep"
 ## what to save
 output.save = "all" # "loss", "all"
+## run cpp?
+run.cpp = FALSE
 ###########################
 
 ###########################
@@ -117,19 +119,22 @@ for (n.ind in 1:length(Ns)){
       cores=detectCores()
       cl <- makeCluster(cores[1] - 1)  # dont overload your computer
       
+      if (run.cpp == TRUE) {
       
-      cpp.init = function() {
-        library(Rcpp)
-        sourceCpp("fast_matrix_ops.cpp")
+	cpp.init = function() {
+        	 library(Rcpp)
+        	 sourceCpp("fast_matrix_ops.cpp")
+      		 }
+	
+	clusterCall(cl,cpp.init)
+
       }
-      clusterCall(cl,cpp.init)
-      
       
       registerDoParallel(cl)
       
       
-      parallel.out <- foreach(sim.ind=1:sim, .combine=cbind,
-                              .noexport=c("csolve","crwish")) %dopar% {
+      parallel.out <- foreach(sim.ind=1:sim, .combine=cbind) %dopar% {
+             ## if CPP:      #, .noexport=c("csolve","crwish")) %dopar% {
       
 
         output = list()
