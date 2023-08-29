@@ -327,9 +327,9 @@ for (n.ind in 1:length(Ns)){
         lambda.out[g.ind,p1.ind,n.ind] = all
       }
       
-      print(paste0("Finsished running: n ",n.ind,
-                   ", p ",p1.ind,
-                   ", g ",g.ind,
+      print(paste0("Finsished running: n: ",Ns[n.ind],
+                   ", p: ",p1s[p1.ind],
+                   ", g: ",gs[g.ind],
                    "!!!!!!!!"))
       
       
@@ -356,6 +356,6 @@ if(output.save == "loss"){
 }
 
 ## summarize output
-source("eval_simulation.R")
+# source("eval_simulation.R")
 
 
