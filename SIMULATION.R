@@ -7,6 +7,7 @@
 ## packages
 library(foreach)
 library(doParallel)
+library(dplyr)
 source("./cov_functions.R")
 source("./helpers.R")
 ###########################
@@ -17,13 +18,17 @@ gs = c(4,10)
 Ns = c(1)# 
 p1s = c(2,4,8)
 p2 = 3
-data.type = "hetero, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
+data.type = "homo, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
 ## file output identifyer
-suffix = "_heteroNOTsep"
+suffix = "_homoNOTsep"
 ## what to save
 output.save = "all" # "loss", "all"
 ## run cpp?
 run.cpp = FALSE
+###########################
+
+###########################
+print(paste0("Running regime: ",suffix,"!!!!"))
 ###########################
 
 ###########################
@@ -34,9 +39,9 @@ cov.save.inds.labels = list(c(1,1,1),c(2,4,2),c(3,6,4),c(5,5,3)) # row, column, 
 
 ###########################
 ## GS parameters
-S = 10#28000
-burnin = 2#3000
-thin = 2#10
+S = 28000
+burnin = 3000
+thin = 10
 ## simulation parameters
 sim = 50
 ###########################
@@ -347,10 +352,10 @@ dimnames(final.out)[[3]] = paste0("N",Ns)
 
 ## save output
 if(output.save == "loss"){
-  output.filename = paste0("ms_output",suffix,".RDS")
+  output.filename = paste0("./output/ms_output",suffix,".RDS")
   saveRDS(final.out,file = output.filename)
 } else if (output.save == "all"){
-  output.filename = paste0("ms_output_all",suffix,".Rdata")
+  output.filename = paste0("./output/ms_output_all",suffix,".Rdata")
   save(final.out,toc.swag,lambda.out,sig.out,
        file = output.filename)
 }
