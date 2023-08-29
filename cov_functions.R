@@ -516,7 +516,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
       V = kronecker(V2[[j]],V1[[j]])
       Y.tilde = Y.list[[j]] - pis^(1/2)*U[[j]]
       M = solve(V * (nu - p - 1) + t(Y.tilde) %*% Y.tilde / (1-pis))
-      Sig.inv[[j]] = rwish.wrapper(M,nu+ns[j]-1)
+      Sig.inv[[j]] = rwish(M,nu+ns[j]-1)
       Sig[[j]] = solve(Sig.inv[[j]])
     }
     
@@ -587,7 +587,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
     # sample Psijs
     for ( j in 1:g){
       M = solve(V0*(nu0 - p - 1) + t(U[[j]]) %*% U[[j]])
-      Psi.inv[[j]] = rwish.wrapper(M,nu0 + ns[j] - 1)
+      Psi.inv[[j]] = rwish(M,nu0 + ns[j] - 1)
       Psi[[j]] = solve(Psi.inv[[j]])
     }
     
@@ -596,7 +596,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
     
     ## sample V0
     M0 = solve(Reduce('+',Psi.inv)*(nu0-p-1) + S0.inv*eta0)
-    V0 = rwish.wrapper(M0,eta0 + nu0*g)
+    V0 = rwish(M0,eta0 + nu0*g)
     V0.inv = solve(V0)
     
     ## sample g V1s
@@ -605,7 +605,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
       L = array(Sig.inv.chol[[j]],dim=c(p1,p2,p))
       helper = lapply(1:p,function(k) L[,,k] %*% t(V2[[j]]) %*% t(L[,,k]))
       M = solve(Reduce('+',helper)*(nu-p-1) + S1.inv * eta1)
-      V1[[j]] = rwish.wrapper(M,eta1 + nu * p2)
+      V1[[j]] = rwish(M,eta1 + nu * p2)
       V1.inv[[j]] = solve(V1[[j]])
     }
     
@@ -614,7 +614,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
       L = array(Sig.inv.chol[[j]],dim=c(p1,p2,p))
       helper = lapply(1:p,function(k) t(L[,,k]) %*% t(V1[[j]]) %*% L[,,k])
       M = solve(Reduce('+',helper)*(nu-p-1) + S2.inv * eta2)
-      V2[[j]] = rwish.wrapper(M,eta2 + nu * p1)
+      V2[[j]] = rwish(M,eta2 + nu * p1)
       V2.inv[[j]] = solve(V2[[j]])
     }
     
@@ -625,13 +625,13 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
     L = array(V0.chol,dim=c(p1,p2,p)) 
     helper = lapply(1:p,function(k) (L[,,k]) %*% t(K2.inv) %*% t(L[,,k]))
     M = solve(Reduce('+',helper)*eta0 + N1 * (xi1 - p1 - 1))
-    K1.inv = rwish.wrapper(M, p2*eta0 + xi1)
+    K1.inv = rwish(M, p2*eta0 + xi1)
     K1 = solve(K1.inv)
     
     # sample K2
     helper = lapply(1:p,function(k) t(L[,,k]) %*% t(K1.inv) %*% (L[,,k]))
     M = solve(Reduce('+',helper)*eta0 + N2 * (xi2 - p2 - 1))
-    K2.inv = rwish.wrapper(M, p1*eta0 + xi2)
+    K2.inv = rwish(M, p1*eta0 + xi2)
     K2 = solve(K2.inv)
     
     # format to be S0 for code
