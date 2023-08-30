@@ -13,9 +13,9 @@ source("./helpers.R")
 
 ###########################
 ## model parameters
-gs = c(4,10)
+gs = 10#c(4,10)
 Ns = c(1)# 
-p1s = c(2,4,8)
+p1s = 8#c(2,4,8)
 p2 = 3
 data.type = "hetero, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
 ## file output identifyer
@@ -38,7 +38,7 @@ S = 10#28000
 burnin = 2#3000
 thin = 2#10
 ## simulation parameters
-sim = 50
+sim = 2#50
 ###########################
 
 
@@ -160,9 +160,10 @@ for (n.ind in 1:length(Ns)){
         
         ###########################
         ## run GS for multiple shrinkage
-        tic.swag = Sys.time()
+        tic = Sys.time()
         model = SWAG_GS(S,burnin,thin,save_all = 0)
-        toc.swag = Sys.time() - tic.swag
+        toc.swag = difftime(Sys.time(),tic,
+                            units = "secs")
 
         ## get estimate under stein's loss
         output$MS.pm = array(colMeans(model$cov.out),dim = c(p,p,g))
@@ -192,50 +193,55 @@ for (n.ind in 1:length(Ns)){
         
         ###########################
         ## no pooling- shrink to decent prior/regularization
-        tic.nopool = Sys.time()
+        tic = Sys.time()
         df = p + 4
         for ( j in 1:g){
           sumsq = t(Y.list[[j]]) %*% Y.list[[j]]
           
           nopool.collect[,,j] = cov.shrink.pm(sumsq,ns[j],eye(p),p+2,de.meaned = T)
         }
-        toc.nopool = Sys.time() - tic.nopool
+        toc.nopool = difftime(Sys.time(),tic,
+                 units = "secs")
         output$nopool = nopool.collect
         ###########################
           
         ###########################
         ## kron MLE- hetero
-        tic.kron = Sys.time()
+        tic = Sys.time()
         kron.out = lapply(Y.list,function(j)
           cov.kron.mle(vec.inv.array(j,p1,p2), de.meaned = TRUE))
         kron.out = lapply(kron.out,function(j)kronecker(j$Sigma,j$Psi))
-        toc.kron = Sys.time() - tic.kron
+        toc.kron  = difftime(Sys.time(),tic,
+                             units = "secs")
         output$hetero.kron = list.to.3d.array(kron.out)
         ###########################
         
         ###########################
         ## kron MLE- homo
-        tic.kron.homo = Sys.time()
+        tic = Sys.time()
         temp = cov.kron.pool.mle(Y.array,group, de.meaned = TRUE)
         kron.homo.out = kronecker(temp$Sigma,temp$Psi)
-        toc.kron.homo = Sys.time() - tic.kron.homo
+        toc.kron.homo = difftime(Sys.time(),tic,
+                                    units = "secs")
         output$homo.kron = rep.array(kron.homo.out,g)
         ###########################
         
         ###########################
         ## homogeneous - pool 
-        tic.pool = Sys.time()
+        tic = Sys.time()
         pool.out = cov.pool(Y.matrix,group)
-        toc.pool = Sys.time() - tic.pool
+        toc.pool = difftime(Sys.time(),tic,
+                            units = "secs")
         output$pool = rep.array(pool.out,g)
         ###########################
         
         ###########################
         ## heterogeneous - standard MLE
-        tic.mle = Sys.time()
+        tic = Sys.time()
         standard.mle = tapply(seq_len(sum(ns)),group,function(KK)
           cov.func(Y.matrix[KK,]))
-        toc.mle = Sys.time() - tic.mle
+        toc.mle = difftime(Sys.time(),tic,
+                           units = "secs")
         
         output$mle = list.to.3d.array(standard.mle)
         ###########################
