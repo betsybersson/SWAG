@@ -18,9 +18,9 @@ gs = c(4,10)
 Ns = c(1)# 
 p1s = c(2,4,8)
 p2 = 3
-data.type = "homo, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
+data.type = "hetero, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
 ## file output identifyer
-suffix = "_homoNOTsep"
+suffix = "_heteroNOTsep"
 ## what to save
 output.save = "all" # "loss", "all"
 ## run cpp?
@@ -357,14 +357,14 @@ dimnames(final.out)[[3]] = paste0("N",Ns)
 
 
 ## save output
-# if(output.save == "loss"){
-#   output.filename = paste0("./output/ms_output",suffix,".RDS")
-#   saveRDS(final.out,file = output.filename)
-# } else if (output.save == "all"){
-#   output.filename = paste0("./output/ms_output_all",suffix,".Rdata")
-#   save(final.out,toc.swag,lambda.out,sig.out,
-#        file = output.filename)
-# }
+if(output.save == "loss"){
+  output.filename = paste0("./output/ms_output",suffix,".RDS")
+  saveRDS(final.out,file = output.filename)
+} else if (output.save == "all"){
+  output.filename = paste0("./output/ms_output_all",suffix,".Rdata")
+  save(final.out,toc.swag,lambda.out,sig.out,
+       file = output.filename)
+}
 
 ## summarize output
 # source("eval_simulation.R")

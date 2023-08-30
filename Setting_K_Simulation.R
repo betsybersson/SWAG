@@ -14,8 +14,8 @@ source("./helpers.R")
 ###########################
 ## model parameters
 g = 4
-p1 = 4; p2 = 3; p = p1*p2
-N = p + 1
+p1 = 8; p2 = 3; p = p1*p2
+N = 2*p
 ns = rep(N,g)
 
 
@@ -178,7 +178,7 @@ final.out = matrix(unlist(parallel.out),ncol = length(Ks),
 print("Saving output now !!!")
 
 ## save output
-output.filename = paste0("./output/K_simulation",suffix,"_p",p,".RDS")
+output.filename = paste0("./output/K_simulation",suffix,"_p",p,"_2n.RDS")
 saveRDS(final.out,file = output.filename)
 
 
