@@ -29,11 +29,13 @@ output.save = "loss"
 ###########################
 
 
+print(paste0("Results for p = ",p,"!!!"))
+
 ###########################
 ## GS parameters
-S = 10#28000
-burnin = 2#3000
-thin = 2#10
+S = 28000
+burnin = 3000
+thin = 10
 ## simulation parameters
 sim = 50
 ###########################
@@ -176,7 +178,7 @@ final.out = matrix(unlist(parallel.out),ncol = length(Ks),
 print("Saving output now !!!")
 
 ## save output
-output.filename = paste0("./output/K_simulation",suffix,".RDS")
+output.filename = paste0("./output/K_simulation",suffix,"_p",p,".RDS")
 saveRDS(final.out,file = output.filename)
 
 
