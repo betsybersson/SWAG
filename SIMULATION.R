@@ -14,13 +14,13 @@ source("./helpers.R")
 
 ###########################
 ## model parameters
-gs = c(4,10)
+gs = 4#c(4,10)
 Ns = c(1)# 
-p1s = c(2,4,8)
+p1s = 4# c(2,4,8)
 p2 = 3
-data.type = "hetero, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
+data.type = "homo, sep" # "homo, sep", "hetero, sep", "homo, not sep"
 ## file output identifyer
-suffix = "_heteroNOTsep"
+suffix = "_homosep_test"
 ## what to save
 output.save = "all" # "loss", "all"
 ## run cpp?
