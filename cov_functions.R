@@ -471,7 +471,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
       df.delta = rep(round(p*3),3) # only using if df_MH == 1
     } else {
       mh.delta = mh.delta.star
-      df.delta.star = rep(round(p/4),3) # only using if df_MH == 1
+      df.delta = rep(round(p/4),3) # only using if df_MH == 1
     }
     
     
