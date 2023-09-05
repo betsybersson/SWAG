@@ -15,21 +15,20 @@ source("./helpers.R")
 ## model parameters
 g = 4
 p1 = 8; p2 = 3; p = p1*p2
-N = 2*p
+N = 2*p # p + 1
 ns = rep(N,g)
-
 
 Ks = c(p+2,2*p,3*p,4*p,5*p)
 
 data.type = "hetero, not sep" # "homo, sep", "hetero, sep", "homo, not sep"
-## file output identifyer
-suffix = "_testK_heteroNOTsep"
+
 ## what to save
 output.save = "loss" 
 ###########################
 
-
-print(paste0("Results for p = ",p,"!!!"))
+###########################
+print(paste0("Results for p = ",p,", N = ",N,"!!!"))
+###########################
 
 ###########################
 ## GS parameters
@@ -38,6 +37,36 @@ burnin = 3000
 thin = 10
 ## simulation parameters
 sim = 50
+###########################
+
+###########################
+## get suffix for filename
+
+if (data.type == "homo, sep"){
+  
+  suffix = "_homosep"
+  
+} else if (data.type == "hetero, sep"){
+  
+  suffix = "_heterosep"
+  
+} else if (data.type == "hetero, not sep") {
+  
+  suffix = "_heteroNOTsep"
+  
+} else if (data.type == "homo, not sep") {
+  
+  suffix = "_homoNOTsep"
+  
+}
+
+if (N == p * 2){
+  n.suffix = "_n2P"
+} else if (N == p+1){
+  n.suffix = "_nPplus1"
+} else {
+  stop("Specify n.suffix!")
+}
 ###########################
 
 
@@ -117,8 +146,7 @@ parallel.out <- foreach(sim.ind=1:sim, .combine=cbind) %dopar% {
   for(i in 1:g){  
     Y.list[[i]] = matrix(rnorm(ns[i]*p),nrow=ns[i]) %*% chol(Sig.true[[i]])
   }
-  set.seed(Sys.time())
-  
+
   ## remove mean
   de.mean = function(YY){
     nn = nrow(YY)
@@ -133,6 +161,7 @@ parallel.out <- foreach(sim.ind=1:sim, .combine=cbind) %dopar% {
   ## run GS for multiple shrinkage for each K
   
   for ( df_ss in 1:length(Ks)){
+    
     model = SWAG_GS(S,burnin,thin,save_all = 0,
                     K = Ks[df_ss])
     
@@ -178,8 +207,9 @@ final.out = matrix(unlist(parallel.out),ncol = length(Ks),
 print("Saving output now !!!")
 
 ## save output
-output.filename = paste0("./output/K_simulation",suffix,"_p",p,"_2n.RDS")
+output.filename = paste0("./output/K_simulation",suffix,"_p",p,n.suffix,".RDS")
 saveRDS(final.out,file = output.filename)
 
+print(paste0("Saved output at file: ",output.filename,"!!!"))
 
 
