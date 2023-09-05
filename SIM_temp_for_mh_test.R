@@ -147,8 +147,6 @@ for (n.ind in 1:length(Ns)){
       
       parallel.out <- foreach(sim.ind=1:sim, .combine=cbind) %dopar% {
 
-        output = list()
-        
         ###########################
         ## obtain data set
         set.seed(sim.ind)
@@ -170,20 +168,22 @@ for (n.ind in 1:length(Ns)){
         ###########################
         ## run GS for multiple shrinkage
         tic.swag = Sys.time()
-        model = SWAG_GS(S,burnin,thin,save_all = 0,
-	      df_MH = 1)
+        model = SWAG_GS(S,burnin,thin,save_all = 0,df_MH = 1)
         toc.swag = Sys.time() - tic.swag
 
         ## get estimate under stein's loss
-        output$MS.pm = array(colMeans(model$cov.out),dim = c(p,p,g))
         MS.stein.pm.temp = array(colMeans(model$cov.inv),dim = c(p,p,g))
         MS.stein.pm.temp.inv = array(NA,dim=c(p,p,g))
         for ( k in 1:g ){
           MS.stein.pm.temp.inv[,,k] = solve(MS.stein.pm.temp[,,k])
         }
-        output$MS.stein.pm = MS.stein.pm.temp.inv
+        MS.stein.pm = MS.stein.pm.temp.inv
         ###########################
-
+        
+        ###########################
+        loss = mean(sapply(1:g, function(l) loss_stein(MS.stein.pm[,,l],Sig.true[[l]] )))
+        ###########################
+        
         ###########################
         ## return this output
         if (output.save == "loss"){
@@ -205,30 +205,15 @@ for (n.ind in 1:length(Ns)){
       if (output.save == "loss"){
         # create new structure
         new.parallel.out = list()
-        for (j in 1:2){
-          temp = matrix(unlist(parallel.out[j,]),
-                        ncol = length(parallel.out[j,][[1]]),byrow=T)
-          colnames(temp)=names(parallel.out[j,][[1]])
-          new.parallel.out$all[[j]] = temp
-        }
-        names(new.parallel.out$all) = rownames(parallel.out)
-        
+        new.parallel.out$stein = unlist(parallel.out)
         # save output
         final.out[g.ind,p1.ind,n.ind] = new.parallel.out
       } else if (output.save == "all") {
         
         ## collect loss- match format above to align with future output
+        # create new structure
         new.parallel.out = list()
-        for (j in 1:2){
-          temp = lapply(parallel.out[1,],function(k)k[[j]])
-          temp = matrix(unlist(temp),
-                        ncol = length(temp[[1]]),
-                        byrow=T)
-                               
-          colnames(temp)=names(parallel.out[1,1][[1]][[1]])
-          new.parallel.out$all[[j]] = temp
-        }
-        names(new.parallel.out$all) = names(parallel.out[1,][[1]])
+        new.parallel.out$stein = unlist(parallel.out[1,])
         # save loss output
         final.out[g.ind,p1.ind,n.ind] = new.parallel.out
         
