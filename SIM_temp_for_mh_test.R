@@ -15,26 +15,19 @@ source("./helpers.R")
 ###########################
 ## model parameters
 gs = c(4)
-Ns = c(1)# 
+Ns = c(1) # a multiplier times P
 p1s = c(4)
 p2 = 3
 data.type = "hetero, sep" # "homo, sep", "hetero, sep", "homo, not sep"
 ## file output identifyer
-suffix = "_heterosep"
+suffix_additional = ""
 ## what to save
-output.save = "loss" # "loss", "all"
-## run cpp?
-run.cpp = FALSE
-###########################
-
-###########################
-print(paste0("Running regime: ",suffix,"!!!!"))
+output.save = "loss" # loss, all
 ###########################
 
 ###########################
 # which indices to save output of from covariance
 cov.save.inds.labels = list(c(1,1,1),c(2,4,2),c(3,6,4),c(5,5,3)) # row, column, group
-
 ###########################
 
 ###########################
@@ -45,6 +38,33 @@ thin = 10
 ## simulation parameters
 sim = 50
 ###########################
+
+###########################
+print(paste0("Running regime: ",suffix,"!!!!"))
+###########################
+
+###########################
+## get suffix for filename
+
+if (data.type == "homo, sep"){
+  
+suffix = "_homosep"
+  
+} else if (data.type == "hetero, sep"){
+  
+suffix = "_heterosep"
+  
+} else if (data.type == "hetero, not sep") {
+  
+suffix = "_heteroNOTsep"
+  
+} else if (data.type == "homo, not sep") {
+  
+suffix = "_homoNOTsep"
+  
+}
+###########################
+
 
 
 ###########################
@@ -120,27 +140,13 @@ for (n.ind in 1:length(Ns)){
       set.seed(Sys.time())
       ###########################
       ## implement GS
-      #setup parallel backend to use many processors
+      # setup parallel backend to use many processors
       cores=detectCores()
-      cl <- makeCluster(cores[1] - 1)  # dont overload your computer
-      
-      if (run.cpp == TRUE) {
-      
-	cpp.init = function() {
-        	 library(Rcpp)
-        	 sourceCpp("fast_matrix_ops.cpp")
-      		 }
-	
-	clusterCall(cl,cpp.init)
-
-      }
+      cl <- makeCluster(cores[1])
       
       registerDoParallel(cl)
       
-      
       parallel.out <- foreach(sim.ind=1:sim, .combine=cbind) %dopar% {
-             ## if CPP:      #, .noexport=c("csolve","crwish")) %dopar% {
-      
 
         output = list()
         
@@ -178,93 +184,7 @@ for (n.ind in 1:length(Ns)){
         }
         output$MS.stein.pm = MS.stein.pm.temp.inv
         ###########################
-        
-        ###########################
-        ## reformat data for the cov functions below
-        
-        ## reformat to matrix with group
-        temp = lbind(Y.list)
-        group = temp$group
-        Y.matrix = temp$mat
-        
-        ## reformat to p1xp2xN array 
-        N = sum(ns)
-        Y.array = array(NA,dim=c(p1,p2,N))
-        for ( j in 1:N){
-          Y.array[,,j] = matrix(Y.matrix[j,],nrow = p1,ncol = p2,byrow = F)
-        }
-        ###########################
-        
-        ###########################
-        ## no pooling- shrink to decent prior/regularization
-        tic.nopool = Sys.time()
-        df = p + 4
-        for ( j in 1:g){
-          sumsq = t(Y.list[[j]]) %*% Y.list[[j]]
-          
-          nopool.collect[,,j] = cov.shrink.pm(sumsq,ns[j],eye(p),p+2,de.meaned = T)
-        }
-        toc.nopool = Sys.time() - tic.nopool
-        output$nopool = nopool.collect
-        ###########################
-          
-        ###########################
-        ## kron MLE- hetero
-        tic.kron = Sys.time()
-        kron.out = lapply(Y.list,function(j)
-          cov.kron.mle(vec.inv.array(j,p1,p2), de.meaned = TRUE))
-        kron.out = lapply(kron.out,function(j)kronecker(j$Sigma,j$Psi))
-        toc.kron = Sys.time() - tic.kron
-        output$hetero.kron = list.to.3d.array(kron.out)
-        ###########################
-        
-        ###########################
-        ## kron MLE- homo
-        tic.kron.homo = Sys.time()
-        temp = cov.kron.pool.mle(Y.array,group, de.meaned = TRUE)
-        kron.homo.out = kronecker(temp$Sigma,temp$Psi)
-        toc.kron.homo = Sys.time() - tic.kron.homo
-        output$homo.kron = rep.array(kron.homo.out,g)
-        ###########################
-        
-        ###########################
-        ## homogeneous - pool 
-        tic.pool = Sys.time()
-        pool.out = cov.pool(Y.matrix,group)
-        toc.pool = Sys.time() - tic.pool
-        output$pool = rep.array(pool.out,g)
-        ###########################
-        
-        ###########################
-        ## heterogeneous - standard MLE
-        tic.mle = Sys.time()
-        standard.mle = tapply(seq_len(sum(ns)),group,function(KK)
-          cov.func(Y.matrix[KK,]))
-        toc.mle = Sys.time() - tic.mle
-        
-        output$mle = list.to.3d.array(standard.mle)
-        ###########################
-          
-        
-        ###########################
-        ## get distance from each output and the truth
-        loss$stein = unlist(lapply(output,function(k)
-          mean(sapply(1:g,function(l) loss_stein(k[,,l],Sig.true[[l]] )))))
-        loss$sq = unlist(lapply(output,function(k)
-          mean(sapply(1:g,function(l) loss_sq(k[,,l],Sig.true[[l]] )))))
-        ###########################
-        
-        
-        ###########################
-        ## collect run time in a vector
-        toc.out = c(toc.swag,
-                    toc.nopool, 
-                    toc.kron,toc.kron.homo,
-                    toc.pool,
-                    toc.mle)
-        ###########################
-        
-        
+
         ###########################
         ## return this output
         if (output.save == "loss"){
@@ -352,13 +272,13 @@ dimnames(final.out)[[3]] = paste0("N",Ns)
 
 ## save output
 if(output.save == "loss"){
-  output.filename = paste0("./output/check_MH_ms_output",suffix,".RDS")
+  output.filename = paste0("./output/check_MH_ms_output",suffix,suffix_additional,".RDS")
   saveRDS(final.out,file = output.filename)
 } else if (output.save == "all"){
-  output.filename = paste0("./output/ms_output_all",suffix,".Rdata")
+  output.filename = paste0("./output/ms_output_all",suffix,suffix_additional,".Rdata")
   save(final.out,toc.swag,lambda.out,sig.out,
        file = output.filename)
 }
 
-## summarize output
-# source("eval_simulation.R")
+print(paste0("Saved output at file: ",output.filename,"!!!"))
+
