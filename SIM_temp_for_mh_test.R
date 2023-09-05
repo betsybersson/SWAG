@@ -18,7 +18,7 @@ gs = c(4)
 Ns = c(1) # a multiplier times P
 p1s = c(4)
 p2 = 3
-data.type = "hetero, sep" # "homo, sep", "hetero, sep", "homo, not sep"
+data.type = "homo, sep" # "homo, sep", "hetero, sep", "homo, not sep"
 ## file output identifyer
 suffix_additional = ""
 ## what to save
@@ -37,10 +37,6 @@ burnin = 8000
 thin = 10
 ## simulation parameters
 sim = 50
-###########################
-
-###########################
-print(paste0("Running regime: ",suffix,"!!!!"))
 ###########################
 
 ###########################
@@ -65,6 +61,9 @@ suffix = "_homoNOTsep"
 }
 ###########################
 
+###########################
+print(paste0("Running regime: ",suffix,"!!!!"))
+###########################
 
 
 ###########################
