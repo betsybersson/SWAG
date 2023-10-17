@@ -118,7 +118,7 @@ SWAG_GS_cpp = function(S,burnin = round(S*.1),thin = 10,
       df.delta = rep(round(p*3),3) # only using if df_MH == 1
     } else {
       mh.delta = mh.delta.star
-      df.delta.star = rep(round(p/4),3) # only using if df_MH == 1
+      df.delta.star = c(3,1,1) #rep(round(p/4),3) # only using if df_MH == 1
     }
     
     
@@ -371,7 +371,9 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
                    save_all = 0,                        
                    mh.delta.star = .1,                 
                    K = 50,                             
-                   df_MH = 0){                         
+                   df_MH = 0,
+                   DF.PROB = 0.3,
+                   DF.SIZE = round(p/2) / ((1-DF.PROB)/DF.PROB)){                         
   
   ###########################
   ## set hyper params
@@ -501,7 +503,9 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
           t(Y.list[[j]] - pis^(1/2)*U[[j]]) / (1-pis)
         
         R = R + dmatT.faster(helper,nu.star-p+1,nu.star,p,ns[j]) - 
-          dmatT.faster(helper,nu-p+1,nu,p,ns[j])
+          dmatT.faster(helper,nu-p+1,nu,p,ns[j]) +
+          dnbinom(nu.star - (p+2),DF.SIZE,DF.PROB,log=TRUE) +
+          dnbinom(nu - (p+2),DF.SIZE,DF.PROB,log=TRUE)
       }
       ## if u<r, set nu to be nu.star
       if (log(runif(1))<R){
@@ -575,7 +579,9 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
         helper = U[[j]] %*% V0.inv %*% t(U[[j]])
         
         R = R + dmatT.faster(helper,nu0.star-p+1,nu0.star,p,ns[j]) - 
-          dmatT.faster(helper,nu0-p+1,nu0,p,ns[j])
+          dmatT.faster(helper,nu0-p+1,nu0,p,ns[j]) +
+          dnbinom(nu0.star - (p+2),DF.SIZE,DF.PROB,log=TRUE) +
+          dnbinom(nu0 - (p+2),DF.SIZE,DF.PROB,log=TRUE)
       }
       # if u<r, set nu0 to be nu0.star
       if (log(runif(1))<R){
@@ -648,7 +654,9 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
     } else if (df_MH == 1){
       eta0.star = reflect(sample((eta0 - df.delta[3]):(eta0 + df.delta[3]),1),p+2)
       R = dwish(V0,S0/eta0.star,eta0.star,if_log=T) - 
-        dwish(V0,S0/eta0,eta0,if_log=T)
+        dwish(V0,S0/eta0,eta0,if_log=T) +
+        dnbinom(eta0.star - (p+2),DF.SIZE,DF.PROB,log=TRUE) +
+        dnbinom(eta0 - (p+2),DF.SIZE,DF.PROB,log=TRUE)
       ## if u<r, set eta0 to be eta0.star
       if (log(runif(1))<R){
         eta0 = eta0.star
@@ -713,7 +721,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
   }
   
   if (df_MH == 0){
-    return(out)
+    return(c(out,list("acc.dfs" = c(nu.acc,nu0.acc,eta0.acc))))
   } else if (df_MH == 1){
     return(c(out,list("acc.dfs" = c(nu.acc,nu0.acc,eta0.acc))))
   }
