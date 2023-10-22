@@ -179,11 +179,14 @@ gamma.mv = function(p,a,log.out = FALSE){
 ##########################################################
 MH_sym_proposal_01 = function(center, delta){
   out = runif(1,center-delta,center+delta)
-  if (out<0){
-    out = abs(out)
-  } else if (out>1){
-    out = 2-out
+  while(out<0 | out > 1){
+    if (out<0){
+      out = abs(out)
+    } else if (out>1){
+      out = 2-out
+    }
   }
+  
   return(out)
 }
 ##########################################################
