@@ -378,9 +378,6 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
   ## set hyper params
   
   ## hyper prior for df
-  EPS = .1
-  MAX.NU = 2/EPS + (p+3)
-  
   DF.PROB = 0.2
   DF.SIZE = max(round((2*p-(p+2))/4) * DF.PROB/(1-DF.PROB),1) # mean is 1st quantile in lower bound to p*2
   
