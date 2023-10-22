@@ -372,7 +372,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
                    mh.delta.star = .1,                 
                    K = 50,                             
                    df_MH = 0,
-                   df.delta.star = c(rep(round(p/4),2),1)){ # delta for reflecting random walk proposal for three df                        
+                   df.delta.star = rep(round(p/4),3)){ # delta for reflecting random walk proposal for three df                        
   
   ###########################
   ## set hyper params
@@ -382,7 +382,7 @@ SWAG_GS = function(S,burnin = round(S*.1),thin = 10,
   MAX.NU = 2/EPS + (p+3)
   
   DF.PROB = 0.2
-  DF.SIZE = round((MAX.NU-(p+2))/2) / ((1-DF.PROB)/DF.PROB) # mean is halfway between lower bound and max
+  DF.SIZE = max(round((2*p-(p+2))/4) * DF.PROB/(1-DF.PROB),1) # mean is 1st quantile in lower bound to p*2
   
   ## rest of hyper priors
   S0 = eye(p); S0.inv = solve(S0) 
